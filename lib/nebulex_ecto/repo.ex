@@ -89,6 +89,9 @@ defmodule NebulexEcto.Repo do
 
       def __repo__, do: @repo
 
+      def all(queryable, key, opts \\ []) when is_atom(key) do
+        do_get_all(queryable, [{:nbx_key, key} | opts], &@repo.all/2)  
+      end
       def get(queryable, id, opts \\ []) do
         do_get(queryable, id, opts, &@repo.get/3)
       end
@@ -151,16 +154,48 @@ defmodule NebulexEcto.Repo do
       def key(struct, key) when is_atom(struct),
         do: {struct, key}
 
-      defp do_get(queryable, key, opts, fallback) do
+      defp do_get_all(queryable, opts, fallback) do
         {nbx_key, opts} = Keyword.pop(opts, :nbx_key)
+        {preloads, opts} = Keyword.pop(opts, :preloads)
         cache_key = nbx_key || key(queryable, key)
 
         cond do
           value = @cache.get(cache_key) ->
             value
 
-          value = fallback.(queryable, key, opts) ->
-            @cache.set(cache_key, value)
+          value = fallback.(queryable, opts) when value != nil ->
+            value =
+              case preloads do
+                nil ->
+                  value
+                _ ->
+                  @repo.preload_assocs(value, preloads)
+              end
+             @cache.set(cache_key, value)
+
+          true ->
+            nil
+        end
+      end
+
+      defp do_get(queryable, key, opts, fallback) do
+        {nbx_key, opts} = Keyword.pop(opts, :nbx_key)
+        {preloads, opts} = Keyword.pop(opts, :preloads) 
+        cache_key = nbx_key || key(queryable, key)
+
+        cond do
+          value = @cache.get(cache_key) ->
+            value
+
+          value = fallback.(queryable, key, opts) when value != nil ->
+            value = 
+              case preloads do
+                nil ->
+                  value
+                _ -> 
+                  @repo.preload_assocs(value, preloads)
+              end
+             @cache.set(cache_key, value)
 
           true ->
             nil
