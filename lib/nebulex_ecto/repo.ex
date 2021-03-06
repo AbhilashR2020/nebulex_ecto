@@ -163,7 +163,7 @@ defmodule NebulexEcto.Repo do
           value = @cache.get(cache_key) ->
             value
 
-          value = fallback.(queryable, opts) when !is_nil(value) ->
+          value = fallback.(queryable, opts) ->
             updated_value =
               case preloads do
                 nil ->
@@ -187,7 +187,7 @@ defmodule NebulexEcto.Repo do
           value = @cache.get(cache_key) ->
             value
 
-          value = fallback.(queryable, key, opts) when value != nil ->
+          value = fallback.(queryable, key, opts) ->
             updated_value = 
               case preloads do
                 nil ->
