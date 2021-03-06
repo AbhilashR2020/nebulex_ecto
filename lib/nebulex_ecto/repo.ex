@@ -157,7 +157,7 @@ defmodule NebulexEcto.Repo do
       defp do_get_all(queryable, opts, fallback) do
         {nbx_key, opts} = Keyword.pop(opts, :nbx_key)
         {preloads, opts} = Keyword.pop(opts, :preloads)
-        cache_key = nbx_key || key(queryable, key)
+        cache_key = key(queryable, nbx_key)
 
         cond do
           value = @cache.get(cache_key) ->
