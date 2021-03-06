@@ -163,15 +163,15 @@ defmodule NebulexEcto.Repo do
           value = @cache.get(cache_key) ->
             value
 
-          value = fallback.(queryable, opts) when value != nil ->
-            value =
+          value = fallback.(queryable, opts) when !is_nil(value) ->
+            updated_value =
               case preloads do
                 nil ->
                   value
                 _ ->
                   @repo.preload_assocs(value, preloads)
               end
-             @cache.set(cache_key, value)
+             @cache.set(cache_key, updated_value)
 
           true ->
             nil
@@ -188,14 +188,14 @@ defmodule NebulexEcto.Repo do
             value
 
           value = fallback.(queryable, key, opts) when value != nil ->
-            value = 
+            updated_value = 
               case preloads do
                 nil ->
                   value
                 _ -> 
                   @repo.preload_assocs(value, preloads)
               end
-             @cache.set(cache_key, value)
+             @cache.set(cache_key, updated_value)
 
           true ->
             nil
