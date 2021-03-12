@@ -89,11 +89,11 @@ defmodule NebulexEcto.Repo do
 
       def __repo__, do: @repo
 
-      def all(queryable, key, opts \\ []) when is_atom(key) do
-        do_get_all(queryable, [{:nbx_key, key} | opts], &@repo.all/2)  
+      def all(queryable, key, opts \\ []) do
+        do_get_all(queryable, [{:nbx_key, key} | opts], &@repo.all/2)
       end
 
-      def one(queryable, key, opts \\ []) when is_atom(key) do
+      def one(queryable, key, opts \\ []) do
         do_get_all(queryable, [{:nbx_key, key} | opts], &@repo.one/2)
       end
 
@@ -162,7 +162,9 @@ defmodule NebulexEcto.Repo do
       defp do_get_all(queryable, opts, fallback) do
         {nbx_key, opts} = Keyword.pop(opts, :nbx_key)
         {preloads, opts} = Keyword.pop(opts, :preloads)
+        {cache_opts, opts} = Keyword.pop(opts, :cache_opts)
         cache_key = key(queryable, nbx_key)
+        cache_opts = cache_opts || [ttl: 5]
 
         cond do
           value = @cache.get(cache_key) ->
@@ -173,10 +175,12 @@ defmodule NebulexEcto.Repo do
               case preloads do
                 nil ->
                   value
+
                 _ ->
                   @repo.preload_assocs(value, preloads)
               end
-             @cache.set(cache_key, updated_value)
+
+            @cache.set(cache_key, updated_value, cache_opts)
 
           true ->
             nil
@@ -185,7 +189,7 @@ defmodule NebulexEcto.Repo do
 
       defp do_get(queryable, key, opts, fallback) do
         {nbx_key, opts} = Keyword.pop(opts, :nbx_key)
-        {preloads, opts} = Keyword.pop(opts, :preloads) 
+        {preloads, opts} = Keyword.pop(opts, :preloads)
         cache_key = nbx_key || key(queryable, key)
 
         cond do
@@ -193,14 +197,16 @@ defmodule NebulexEcto.Repo do
             value
 
           value = fallback.(queryable, key, opts) ->
-            updated_value = 
+            updated_value =
               case preloads do
                 nil ->
                   value
-                _ -> 
+
+                _ ->
                   @repo.preload_assocs(value, preloads)
               end
-             @cache.set(cache_key, updated_value)
+
+            @cache.set(cache_key, updated_value)
 
           true ->
             nil
